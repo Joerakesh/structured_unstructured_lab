@@ -1,0 +1,2 @@
+# This repository contains MySQL SQL, MongoDB mongosh JavaScript, and Neo4j Cypher exercises.
+# Database engines are external prerequisites; no Python package is required for these scripts.
