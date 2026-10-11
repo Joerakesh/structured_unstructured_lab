@@ -1,0 +1,60 @@
+name: Validate and package database lab
+
+on:
+  push:
+    paths:
+      - 's*/*'
+      - 'u*/*'
+      - 'README.md'
+      - '.github/workflows/validate-and-package.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: database-lab-validation
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Validate exercise structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f README.md
+          for id in s01 s02 s03 s04 s05 s06 s07 s08 s09 s10 s11 s12 s13 s14; do
+            folder="$(find . -maxdepth 1 -type d -name "${id}-*" -print -quit)"
+            test -n "$folder" || { echo "Missing folder: $id"; exit 1; }
+            test -f "$folder/README.md"
+            test -n "$(find "$folder" -maxdepth 1 -type f -name '*.sql' -print -quit)"
+          done
+          for id in u01 u02 u03 u04 u05 u06 u07 u08 u09 u10 u11 u12; do
+            folder="$(find . -maxdepth 1 -type d -name "${id}-*" -print -quit)"
+            test -n "$folder" || { echo "Missing folder: $id"; exit 1; }
+            test -f "$folder/README.md"
+            test -n "$(find "$folder" -maxdepth 1 -type f \( -name '*.js' -o -name '*.cypher' \) -print -quit)"
+          done
+          echo 'Validated all 26 exercise folders.'
+      - name: Check script files
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r file; do
+            test -s "$file"
+          done < <(find s* u* -type f \( -name '*.sql' -o -name '*.js' -o -name '*.cypher' \) | sort)
+          echo 'All database scripts are non-empty.'
+      - name: Package exercises
+        run: |
+          mkdir -p dist
+          zip -r dist/structured-unstructured-lab.zip s* u* README.md requirements.txt
+      - name: Upload exercise bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: structured-unstructured-lab-source
+          path: dist/structured-unstructured-lab.zip
+          retention-days: 14
